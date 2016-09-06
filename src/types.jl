@@ -11,6 +11,7 @@ abstract TimeSeries <: Acquisition
 typealias VoltageType SIUnits.SIQuantity{Float64, 2,1,-3,-1,0,0,0,0,0}
 typealias TimeRangeType SIUnits.SIRange{FloatRange{Float64},Float64,0,0,1,0,0,0,0,0,0} 
 typealias TimeArrayType Array{SIUnits.SIQuantity{Float64,0,0,1,0,0,0,0,0,0},2}
+typealias SpatialType SIUnits.SIQuantity{Int64, SIUnits.tup(SIUnits.Meter)...}
 
 range{T<:SIUnits.SIQuantity}(a::T, b::T, n::Integer) = a:b:(a+(n-1)*b)
 
@@ -19,6 +20,13 @@ type ElectricalSeries <: TimeSeries
 	help::ASCIIString
 	resolution::Float64
 	electrode_idx::Array{Int64,1}
+	name::ASCIIString
+	timestamps::Union{TimeRangeType, TimeArrayType}
+end
+
+type SpatialSeries <: TimeSeries
+	data::Array{SpatialType, 2}
+	help::ASCIIString
 	name::ASCIIString
 	timestamps::Union{TimeRangeType, TimeArrayType}
 end
