@@ -14,12 +14,12 @@ function FileIO.load(file::File{DataFormat{:NWB}})::NWBData
 				#Check the last entry
 				_datatype = _ancestry[end]
 				_data = read(ggg["data"])
-				if "timestamps" in ggg
-					__timestamps = read(ggg["timestamps"])
-				elseif "start_time" in ggg && "rate" in ggg
+				if "timestamps" in names(ggg)
+					_timestamps = read(ggg["timestamps"])
+				elseif "start_time" in names(ggg) && "rate" in names(ggg)
 					_start_time = read(ggg,"start_time")
 					_rate = read(ggg, "rate")
-					_timestamps = range(start_time*SIUnits.Second,(1/_rate)*SIUnits.Second,size(_data,1))
+					_timestamps = range(_start_time*SIUnits.Second,(1/_rate)*SIUnits.Second,size(_data,1))
 				else
 					warn("No timestanps found. Using dummy timestamps")
 					_timestamps = range(1.0*SIUnits.Second, 1.0*SIUnits.Second, size(_data,1))
@@ -70,8 +70,8 @@ function write(s::HDF5.DataFile, data::TimeSeries)
 	write(s, "$(_path)/unit",string(SIUnits.unit(first(data.data))))
 	write(s, "$(_path)/electrode_idx", data.electrode_idx)
 	if typeof(data.timestamps) <: Range
-		write(s, "$(_path)/start_time", first(data.timestamps))
-		_rate = 1.0/(data.timestamps[2] - data.timestamps[1])
+		write(s, "$(_path)/start_time", first(data.timestamps).val)
+		_rate = 1.0/(data.timestamps[2].val - data.timestamps[1].val)
 		write(s, "$(_path)/rate", _rate)
 	else
 		write(s, "$(_path)/timestamps", data.timestamps)
