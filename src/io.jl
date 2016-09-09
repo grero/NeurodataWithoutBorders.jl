@@ -19,31 +19,19 @@ function FileIO.load(file::File{DataFormat{:NWB}})::NWBData
 				elseif "start_time" in names(ggg) && "rate" in names(ggg)
 					_start_time = read(ggg,"start_time")
 					_rate = read(ggg, "rate")
-					_timestamps = range(_start_time*SIUnits.Second,(1/_rate)*SIUnits.Second,size(_data,1))
+					_timestamps = range(_start_time*u"s",(1/_rate)*u"s",size(_data,1))
 				else
 					warn("No timestanps found. Using dummy timestamps")
-					_timestamps = range(1.0*SIUnits.Second, 1.0*SIUnits.Second, size(_data,1))
+					_timestamps = range(1.0u"s", 1.0u"s", size(_data,1))
 				end
 				_help = read(ggg["help"])
 				_resolution = read(ggg["resolution"])
 				_electrode_idx = read(ggg["electrode_idx"])
 				_name = read(ggg["name"])
 				_unit = read(ggg["unit"])
-				#stop gap until SIUnits can parse derived units
-				#unit = parse(SIUnits.SIUnit, _unit)
-				if _unit == "V"
-					#unit = VoltageType
-					unit = SIUnits.ShortUnits.V
-				elseif _unit == "kg m²s⁻³A⁻¹"
-					unit = SIUnits.ShortUnits.V
-				elseif _unit == "mV"
-					unit = SIUnits.ShortHunits.mV
-				else
-					warn("Unknonw units. Defaulting to V")
-					unit = SIUnits.ShortUnits.V
-				end
+				unit = eval(parse("1.0Unitful.$(_unit)"))
 				if _datatype == "ElectricalSeries"
-					return ElectricalSeries(_data*unit,_help, _resolution, _electrode_idx, _name, _timestamps)
+					return ElectricalSeries(map(x->x*unit,_data),_help, _resolution, _electrode_idx, _name, _timestamps)
 				end
 			end
 		end
@@ -67,7 +55,7 @@ function write(s::HDF5.DataFile, data::TimeSeries)
 	write(s, "$(_path)/name", data.name)
 	write(s, "$(_path)/help", data.help)
 	write(s, "$(_path)/resolution", data.resolution)
-	write(s, "$(_path)/unit",string(SIUnits.unit(first(data.data))))
+	write(s, "$(_path)/unit",string(unit(first(data.data))))
 	write(s, "$(_path)/electrode_idx", data.electrode_idx)
 	if typeof(data.timestamps) <: Range
 		write(s, "$(_path)/start_time", first(data.timestamps).val)
@@ -76,5 +64,5 @@ function write(s::HDF5.DataFile, data::TimeSeries)
 	else
 		write(s, "$(_path)/timestamps", data.timestamps)
 	end
-	write(s, "$(_path)/ancestry", ["TimeSeries", split(string(typeof(data)),".")[end]])
+	write(s, "$(_path)/ancestry", ["TimeSeries", split(string(typeof(data).name),".")[end]])
 end

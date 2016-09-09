@@ -1,5 +1,5 @@
 module NeurodataWithoutBorders
-using SIUnits
+using Unitful
 using HDF5
 include("types.jl")
 include("io.jl")

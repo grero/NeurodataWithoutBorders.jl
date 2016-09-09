@@ -1,3 +1,4 @@
 FileIO
 HDF5
-SIUnits
+Unitful
+julia 0.5
