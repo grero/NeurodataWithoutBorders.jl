@@ -6,7 +6,7 @@ using SIUnits.ShortUnits
 
 
 dir = tempdir()
-aname = joinpath(dir, "test3.nwb")
+fname = joinpath(dir, "test3.nwb")
 
 B = rand(1000,10)mV
 eldata = NeurodataWithoutBorders.ElectricalSeries(B, "test", 1.0, collect(1:10), "test3",NeurodataWithoutBorders.range(0.0s, (1/30000.0)s, size(B,1)))
