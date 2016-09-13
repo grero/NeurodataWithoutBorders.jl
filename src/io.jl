@@ -1,10 +1,11 @@
 using FileIO
 import Base.write
 
-function FileIO.load(file::File{DataFormat{:NWB}})::NWBData
+function FileIO.load{T<:NWBData}(file::File{DataFormat{:NWB}})::Array{NWBData,1}
 	#TODO: Read the hdf5 file, iterating through each group and classifying the datasets in that group according to the identified neurodata_type
 	#e.g. neurodata_type == TimeSeries indicate that the datasets in this groups describes a time series object
 	file = HDF5.h5open(file.filename)
+	rdata = Array(NWBData,0)
 	if "acquisition" in names(file)
 		g = file["acquisition"]
 		if "timeseries" in names(g)
@@ -26,16 +27,19 @@ function FileIO.load(file::File{DataFormat{:NWB}})::NWBData
 				end
 				_help = read(ggg["help"])
 				_resolution = read(ggg["resolution"])
-				_electrode_idx = read(ggg["electrode_idx"])
 				_name = read(ggg["name"])
 				_unit = read(ggg["unit"])
 				unit = eval(parse("1.0Unitful.$(_unit)"))
 				if _datatype == "ElectricalSeries"
-					return ElectricalSeries(map(x->x*unit,_data),_help, _resolution, _electrode_idx, _name, _timestamps)
+					_electrode_idx = read(ggg["electrode_idx"])
+					push!(rdata,ElectricalSeries(map(x->x*unit,_data),_help, _resolution, _electrode_idx, _name, _timestamps))
+				elseif _datatype == "SpatialSeries"
+					push!(rdata,SpatialSeries(map(x->x*unit,_data),_help, _name, _timestamps))
 				end
 			end
 		end
 	end
+	return rdata
 end
 
 function save(f::File{format"NWB"},data::NWBData)
@@ -59,9 +63,16 @@ function write(s::HDF5.DataFile, data::TimeSeries)
 	end
 	write(s, "$(_path)/name", data.name)
 	write(s, "$(_path)/help", data.help)
-	write(s, "$(_path)/resolution", data.resolution)
+	if "resolution" in fieldnames(data)
+		_resolution = data.resolution
+	else
+		_resolution = NaN
+	end
+	write(s, "$(_path)/resolution", _resolution)
 	write(s, "$(_path)/unit",string(unit(first(data.data))))
-	write(s, "$(_path)/electrode_idx", data.electrode_idx)
+	if typeof(data) <: ElectricalSeries
+		write(s, "$(_path)/electrode_idx", data.electrode_idx)
+	end
 	if typeof(data.timestamps) <: Range
 		write(s, "$(_path)/start_time", first(data.timestamps).val)
 		_rate = 1.0/(data.timestamps[2].val - data.timestamps[1].val)
