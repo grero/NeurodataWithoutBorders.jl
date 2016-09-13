@@ -39,7 +39,12 @@ function FileIO.load(file::File{DataFormat{:NWB}})::NWBData
 end
 
 function save(f::File{format"NWB"},data::NWBData)
-	h5open(f.filename, "w") do s
+	if isfile(f.filename)
+		_mode = "r+"
+	else
+		_mode ="w"
+	end
+	h5open(f.filename, _mode) do s
 		write(s, data)		
 	end
 end
