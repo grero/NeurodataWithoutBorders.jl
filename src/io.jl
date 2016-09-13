@@ -1,6 +1,34 @@
 using FileIO
 import Base.write
 
+function read_data(gg::HDF5.HDF5Group)::NWBData
+	_ancestry = read(gg,"ancestry")
+	#Check the last entry
+	_datatype = _ancestry[end]
+	_data = read(gg["data"])
+	if "timestamps" in names(gg)
+		_timestamps = read(gg["timestamps"])
+	elseif "start_time" in names(gg) && "rate" in names(gg)
+		_start_time = read(gg,"start_time")
+		_rate = read(gg, "rate")
+		_timestamps = range(_start_time*u"s",(1/_rate)*u"s",size(_data,1))
+	else
+		warn("No timestanps found. Using dummy timestamps")
+		_timestamps = range(1.0u"s", 1.0u"s", size(_data,1))
+	end
+	_help = read(gg["help"])
+	_resolution = read(gg["resolution"])
+	_name = read(gg["name"])
+	_unit = read(gg["unit"])
+	unit = eval(parse("1.0Unitful.$(_unit)"))
+	if _datatype == "ElectricalSeries"
+		_electrode_idx = read(gg["electrode_idx"])
+		return ElectricalSeries(map(x->x*unit,_data),_help, _resolution, _electrode_idx, _name, _timestamps)
+	elseif _datatype == "SpatialSeries"
+		return SpatialSeries(map(x->x*unit,_data),_help, _name, _timestamps)
+	end
+end
+
 function FileIO.load{T<:NWBData}(file::File{DataFormat{:NWB}})::Array{NWBData,1}
 	#TODO: Read the hdf5 file, iterating through each group and classifying the datasets in that group according to the identified neurodata_type
 	#e.g. neurodata_type == TimeSeries indicate that the datasets in this groups describes a time series object
@@ -11,31 +39,8 @@ function FileIO.load{T<:NWBData}(file::File{DataFormat{:NWB}})::Array{NWBData,1}
 		if "timeseries" in names(g)
 			gg = g["timeseries"]
 			for ggg in gg
-				_ancestry = read(ggg,"ancestry")
-				#Check the last entry
-				_datatype = _ancestry[end]
-				_data = read(ggg["data"])
-				if "timestamps" in names(ggg)
-					_timestamps = read(ggg["timestamps"])
-				elseif "start_time" in names(ggg) && "rate" in names(ggg)
-					_start_time = read(ggg,"start_time")
-					_rate = read(ggg, "rate")
-					_timestamps = range(_start_time*u"s",(1/_rate)*u"s",size(_data,1))
-				else
-					warn("No timestanps found. Using dummy timestamps")
-					_timestamps = range(1.0u"s", 1.0u"s", size(_data,1))
-				end
-				_help = read(ggg["help"])
-				_resolution = read(ggg["resolution"])
-				_name = read(ggg["name"])
-				_unit = read(ggg["unit"])
-				unit = eval(parse("1.0Unitful.$(_unit)"))
-				if _datatype == "ElectricalSeries"
-					_electrode_idx = read(ggg["electrode_idx"])
-					push!(rdata,ElectricalSeries(map(x->x*unit,_data),_help, _resolution, _electrode_idx, _name, _timestamps))
-				elseif _datatype == "SpatialSeries"
-					push!(rdata,SpatialSeries(map(x->x*unit,_data),_help, _name, _timestamps))
-				end
+				_data = read_data(ggg)
+				push!(rdata, _data)
 			end
 		end
 	end
