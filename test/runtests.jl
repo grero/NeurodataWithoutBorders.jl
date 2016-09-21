@@ -4,8 +4,7 @@ using Base.Test
 using Unitful
 
 
-dir = tempdir()
-fname = joinpath(dir, "test3.nwb")
+fname = "$(tempname()).nwb"
 
 B = Array(typeof(1.0u"mV"),1000,10)
 for i in eachindex(B)
