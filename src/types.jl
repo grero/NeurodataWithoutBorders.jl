@@ -11,10 +11,10 @@ abstract AbstractElectricalSeries <: TimeSeries
 
 type ElectricalSeries{T<:Unitful.Voltage,S<:Unitful.Time} <: AbstractElectricalSeries
 	data::Array{T,2}
-	help::ASCIIString
+	help::String
 	resolution::Float64
 	electrode_idx::Array{Int64,1}
-	name::ASCIIString
+	name::String
 	timestamps::Union{AbstractArray{S,1}, StepRange{S,S}}
 end
 
@@ -24,7 +24,7 @@ end
 
 type SpatialSeries{T<:Unitful.Length,S<:Unitful.Time} <: TimeSeries
 	data::Array{T, 2}
-	help::ASCIIString
-	name::ASCIIString
+	help::String
+	name::String
 	timestamps::Union{AbstractArray{S,1}, StepRange{S,S}}
 end
