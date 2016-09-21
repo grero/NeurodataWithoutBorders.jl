@@ -29,7 +29,7 @@ function read_data(gg::HDF5.HDF5Group)::NWBData
 	end
 end
 
-function FileIO.load{T<:NWBData}(file::File{DataFormat{:NWB}})::Array{NWBData,1}
+function FileIO.load(file::File{DataFormat{:NWB}})::Array{NWBData,1}
 	#TODO: Read the hdf5 file, iterating through each group and classifying the datasets in that group according to the identified neurodata_type
 	#e.g. neurodata_type == TimeSeries indicate that the datasets in this groups describes a time series object
 	file = HDF5.h5open(file.filename)
