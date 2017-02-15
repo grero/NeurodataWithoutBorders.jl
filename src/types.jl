@@ -18,8 +18,11 @@ type ElectricalSeries{T<:Unitful.Voltage,S<:Unitful.Time} <: AbstractElectricalS
 	timestamps::Union{AbstractArray{S,1}, StepRange{S,S}}
 end
 
-type SpikeEventSeries{T<:Unitful.Voltage} <: AbstractElectricalSeries
+type SpikeEventSeries{T<:Unitful.Voltage, S<:Unitful.Time} <: AbstractElectricalSeries
 	data::Array{T, 3}
+	help::String
+  name::String
+	timestamps::Union{AbstractArray{S,1}, StepRange{S,S}}
 end
 
 type SpatialSeries{T<:Unitful.Length,S<:Unitful.Time} <: TimeSeries

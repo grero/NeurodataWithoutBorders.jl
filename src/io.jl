@@ -1,5 +1,5 @@
 using FileIO
-import Base.write
+import Base.write, Base.show
 
 function read_data(gg::HDF5.HDF5Group)::NWBData
 	_ancestry = read(gg,"ancestry")
@@ -26,6 +26,8 @@ function read_data(gg::HDF5.HDF5Group)::NWBData
 		return ElectricalSeries(map(x->x*unit,_data),_help, _resolution, _electrode_idx, _name, _timestamps)
 	elseif _datatype == "SpatialSeries"
 		return SpatialSeries(map(x->x*unit,_data),_help, _name, _timestamps)
+  elseif _datatype == "SpikeEventSeries"
+    return SpikeEventSeries(map(x->x*unit, _data), _help, _name, _timestamps)
 	end
 end
 
@@ -60,12 +62,6 @@ end
 
 function write(s::HDF5.DataFile, data::TimeSeries)
 	_path = "/acquisition/timeseries/$(data.name)"
-	dd = HDF5.d_create(s, "$(_path)/data", HDF5.datatype(eltype(first(data.data).val)), HDF5.dataspace(size(data.data)))
-	for j in 1:size(data.data,2)
-		for i in 1:size(data.data,1)
-			dd[i,j] = data.data[i,j].val
-		end
-	end
 	write(s, "$(_path)/name", data.name)
 	write(s, "$(_path)/help", data.help)
 	if "resolution" in fieldnames(data)
@@ -86,4 +82,35 @@ function write(s::HDF5.DataFile, data::TimeSeries)
 		write(s, "$(_path)/timestamps", data.timestamps)
 	end
 	write(s, "$(_path)/ancestry", ["TimeSeries", split(string(typeof(data).name),".")[end]])
+end
+
+function write(s::HDF5.DataFile, data::SpikeEventSeries)
+  invoke(write,(HDF5.DataFile, TimeSeries),s, data) #call write for the general TimeSries type first
+	_path = "/acquisition/timeseries/$(data.name)"
+	dd = HDF5.d_create(s, "$(_path)/data", HDF5.datatype(eltype(first(data.data).val)), HDF5.dataspace(size(data.data)))
+	for j in 1:size(data.data,2)
+		for i in 1:size(data.data,1)
+      for k in 1:size(data.data,3)
+        dd[i,j,k] = data.data[i,j,k].val
+      end
+		end
+	end
+end
+
+function write(s::HDF5.DataFile, data::Union{ElectricalSeries,SpatialSeries})
+  invoke(write,(HDF5.DataFile, TimeSeries), s,data) #call write for the general TimeSries type first
+	_path = "/acquisition/timeseries/$(data.name)"
+  #write the data
+	dd = HDF5.d_create(s, "$(_path)/data", HDF5.datatype(eltype(first(data.data).val)), HDF5.dataspace(size(data.data)))
+	for j in 1:size(data.data,2)
+		for i in 1:size(data.data,1)
+			dd[i,j] = data.data[i,j].val
+		end
+	end
+end
+
+function Base.show(io::IO, X::TimeSeries)
+  print(io, "$(typeof(X).name) with data ")
+  println(io, "$(join(map(string, size(X.data)), "x")) Array{$(unit(first(X.data))),$(ndims(X.data))}")
+  nothing
 end
