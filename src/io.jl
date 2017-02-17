@@ -79,7 +79,9 @@ function write(s::HDF5.DataFile, data::TimeSeries)
 		_rate = 1.0/(data.timestamps[2].val - data.timestamps[1].val)
 		write(s, "$(_path)/rate", _rate)
 	else
-		write(s, "$(_path)/timestamps", data.timestamps)
+    _timestamps = [t.val for t in data.timestamps+0.0u"s"] #convert o seconds
+		_rate = 1.0/(_timestamps[2] - _timestamps[1])
+		write(s, "$(_path)/timestamps", _timestamps)
 	end
 	write(s, "$(_path)/ancestry", ["TimeSeries", split(string(typeof(data).name),".")[end]])
 end
