@@ -56,7 +56,7 @@ function save(f::File{format"NWB"},data::NWBData)
 		_mode ="w"
 	end
 	h5open(f.filename, _mode) do s
-		write(s, data)		
+		write(s, data)
 	end
 end
 
