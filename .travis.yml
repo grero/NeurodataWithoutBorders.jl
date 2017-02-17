@@ -1,6 +1,5 @@
 language: julia
 julia:
       - release
-      - nightly
 after_success:
       - julia -e 'cd(Pkg.dir("NeurodataWithoutBorders")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
