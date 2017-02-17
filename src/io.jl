@@ -62,6 +62,9 @@ end
 
 function write(s::HDF5.DataFile, data::TimeSeries)
 	_path = "/acquisition/timeseries/$(data.name)"
+  if exists(s, _path)
+    return nothing
+  end
 	write(s, "$(_path)/name", data.name)
 	write(s, "$(_path)/help", data.help)
 	if "resolution" in fieldnames(data)
@@ -89,26 +92,30 @@ end
 function write(s::HDF5.DataFile, data::SpikeEventSeries)
   invoke(write,(HDF5.DataFile, TimeSeries),s, data) #call write for the general TimeSries type first
 	_path = "/acquisition/timeseries/$(data.name)"
-	dd = HDF5.d_create(s, "$(_path)/data", HDF5.datatype(eltype(first(data.data).val)), HDF5.dataspace(size(data.data)))
-	for j in 1:size(data.data,2)
-		for i in 1:size(data.data,1)
-      for k in 1:size(data.data,3)
-        dd[i,j,k] = data.data[i,j,k].val
+  if !exists(s, "$(_path)/data")
+    dd = HDF5.d_create(s, "$(_path)/data", HDF5.datatype(eltype(first(data.data).val)), HDF5.dataspace(size(data.data)))
+    for j in 1:size(data.data,2)
+      for i in 1:size(data.data,1)
+        for k in 1:size(data.data,3)
+          dd[i,j,k] = data.data[i,j,k].val
+        end
       end
-		end
-	end
+    end
+  end
 end
 
 function write(s::HDF5.DataFile, data::Union{ElectricalSeries,SpatialSeries})
   invoke(write,(HDF5.DataFile, TimeSeries), s,data) #call write for the general TimeSries type first
 	_path = "/acquisition/timeseries/$(data.name)"
-  #write the data
-	dd = HDF5.d_create(s, "$(_path)/data", HDF5.datatype(eltype(first(data.data).val)), HDF5.dataspace(size(data.data)))
-	for j in 1:size(data.data,2)
-		for i in 1:size(data.data,1)
-			dd[i,j] = data.data[i,j].val
-		end
-	end
+  if !exists(s, "$(_path)/data")
+    #write the data
+    dd = HDF5.d_create(s, "$(_path)/data", HDF5.datatype(eltype(first(data.data).val)), HDF5.dataspace(size(data.data)))
+    for j in 1:size(data.data,2)
+      for i in 1:size(data.data,1)
+        dd[i,j] = data.data[i,j].val
+      end
+    end
+  end
 end
 
 function Base.show(io::IO, X::TimeSeries)
