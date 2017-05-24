@@ -32,6 +32,12 @@ type SpikeEventSeries{T<:Unitful.Voltage, S<:Unitful.Time} <: AbstractElectrical
 	timestamps::Union{AbstractArray{S,1}, StepRange{S,S}}
 end
 
+function SpikeEventSeries{T<:Unitful.Voltage}(D::Array{T,2}, help, name, timestamps)
+	wf = zeros(T, size(D,1), 1, size(D,2))
+	wf[:,1,:] = D
+	SpikeEventSeries(wf, help, name, timestamps)
+end
+
 type SpatialSeries{T<:Unitful.Length,S<:Unitful.Time} <: TimeSeries
 	data::Array{T, 2}
 	help::String
