@@ -28,4 +28,8 @@ wdata = NeurodataWithoutBorders.load(File(format"NWB", fname))
 @test qdata.help == wdata[2].help
 @test qdata.timestamps == wdata[2].timestamps
 
+pth = NeurodataWithoutBorders.get_path(FileIO.File(format"NWB", fname))
+@test "test3" in pth["ElectricalSeries"]
+@test "test4" in pth["SpatialSeries"]
+
 

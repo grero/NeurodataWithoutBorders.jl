@@ -15,7 +15,14 @@ type ElectricalSeries{T<:Unitful.Voltage,S<:Unitful.Time} <: AbstractElectricalS
 	resolution::Float64
 	electrode_idx::Array{Int64,1}
 	name::String
-	timestamps::Union{AbstractArray{S,1}, StepRange{S,S}}
+  timestamps::Union{AbstractArray{S,1}, StepRange{S,S},Range{S}}
+  rate::Unitful.Frequency{Float64}
+  start_time::Unitful.Time{Float64}
+end
+
+function ElectricalSeries(data, help::String, resolution::Float64, electrode_idx::Array{Int64,1}, name::String, rate::Unitful.Frequency{Int64})
+  timestamps = (0//1)u"s":(1//rate):(size(data,1)//rate)
+  ElectricalSeries(data, help, resolution, electrode_idx, name, timestamps, float(rate),0.0u"s")
 end
 
 type SpikeEventSeries{T<:Unitful.Voltage, S<:Unitful.Time} <: AbstractElectricalSeries

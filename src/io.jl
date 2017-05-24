@@ -8,10 +8,20 @@ function read_data(gg::HDF5.HDF5Group)::NWBData
 	_data = read(gg["data"])
 	if "timestamps" in names(gg)
 		_timestamps = read(gg["timestamps"])
+    start_time = first(_timestamps)
+    if _rate in names(gg)
+      _rate = read(gg, "rate")
+    else
+      _ate = 1.0/(start_time[2] - start_time[1])
+    end
 	elseif "start_time" in names(gg) && "rate" in names(gg)
-		_start_time = read(gg,"start_time")
-		_rate = read(gg, "rate")
-		_timestamps = range(_start_time*u"s",(1/_rate)*u"s",size(_data,1))
+		_start_time = read(gg,"start_time")*1.0u"s"
+		_rate = read(gg, "rate")*1.0u"Hz"
+    if isinteger(_rate)
+      #pass
+    else
+		_timestamps = range(_start_time,(1/_rate),size(_data,1))
+    end
 	else
 		warn("No timestanps found. Using dummy timestamps")
 		_timestamps = range(1.0u"s", 1.0u"s", size(_data,1))
@@ -23,7 +33,7 @@ function read_data(gg::HDF5.HDF5Group)::NWBData
 	unit = eval(parse("1.0Unitful.$(_unit)"))
 	if _datatype == "ElectricalSeries"
 		_electrode_idx = read(gg["electrode_idx"])
-		return ElectricalSeries(map(x->x*unit,_data),_help, _resolution, _electrode_idx, _name, _timestamps)
+		return ElectricalSeries(map(x->x*unit,_data),_help, _resolution, _electrode_idx, _name, _timestamps,_rate,_start_time)
 	elseif _datatype == "SpatialSeries"
 		return SpatialSeries(map(x->x*unit,_data),_help, _name, _timestamps)
   elseif _datatype == "SpikeEventSeries"
@@ -77,13 +87,11 @@ function write(s::HDF5.DataFile, data::TimeSeries)
 	if typeof(data) <: ElectricalSeries
 		write(s, "$(_path)/electrode_idx", data.electrode_idx)
 	end
+  write(s, "$(_path)/rate", data.rate)
 	if typeof(data.timestamps) <: Range
 		write(s, "$(_path)/start_time", first(data.timestamps).val)
-		_rate = 1.0/(data.timestamps[2].val - data.timestamps[1].val)
-		write(s, "$(_path)/rate", _rate)
 	else
     _timestamps = [t.val for t in data.timestamps+0.0u"s"] #convert o seconds
-		_rate = 1.0/(_timestamps[2] - _timestamps[1])
 		write(s, "$(_path)/timestamps", _timestamps)
 	end
 	write(s, "$(_path)/ancestry", ["TimeSeries", split(string(typeof(data).name),".")[end]])
@@ -116,6 +124,35 @@ function write(s::HDF5.DataFile, data::Union{ElectricalSeries,SpatialSeries})
       end
     end
   end
+end
+
+"""
+Return a dictionary of all datasets for each NWB datatype
+"""
+function get_path!(pth::Dict, o::Union{HDF5.HDF5File, HDF5.HDF5Group})
+  if exists(o, "name")
+    if exists(o, "ancestry")
+      _an = read(o, "ancestry")
+      _datatype = _an[end]
+      if !(_datatype in keys(pth))
+        pth[_datatype] = Array{String}(0)
+      end
+      push!(pth[_datatype], read(o, "name"))
+    end
+  else
+    #get down one level
+    for g in o
+      get_path!(pth, g)
+    end
+  end
+end
+
+function get_path(tfile::FileIO.File{format"NWB"})
+  pth = Dict()
+	h5open(tfile.filename, "r") do ff 
+    get_path!(pth, ff)
+  end
+  pth
 end
 
 function Base.show(io::IO, X::TimeSeries)
